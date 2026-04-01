@@ -62,7 +62,6 @@ function createApplication() {
         botToken: configuration.max.botToken,
         targetChatId: configuration.max.targetChatId,
         messageText,
-        normalizedOrder,
         requestTimeoutMs: configuration.max.requestTimeoutMs,
       });
 

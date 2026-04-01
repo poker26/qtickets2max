@@ -10,24 +10,9 @@ function createAbortSignal(timeoutMilliseconds) {
   };
 }
 
-function buildMaxMessageBody({ messageText, normalizedOrder }) {
+function buildMaxMessageBody({ messageText }) {
   return {
-    text: messageText,
-    notify: {
-      source: "qtickets",
-      order: {
-        id: normalizedOrder.orderId,
-        status: normalizedOrder.orderStatus,
-        eventName: normalizedOrder.eventName,
-        eventDateIso: normalizedOrder.eventDateIso,
-        ticketCount: normalizedOrder.ticketCount,
-        totalAmount: normalizedOrder.totalAmount,
-        currency: normalizedOrder.currency,
-        buyerName: normalizedOrder.buyerName,
-        buyerPhone: normalizedOrder.buyerPhone,
-        buyerEmail: normalizedOrder.buyerEmail,
-      },
-    },
+    text: String(messageText ?? "").trim(),
   };
 }
 
@@ -36,12 +21,10 @@ export async function postOrderNotificationToMax({
   botToken,
   targetChatId,
   messageText,
-  normalizedOrder,
   requestTimeoutMs,
 }) {
   const requestBody = buildMaxMessageBody({
     messageText,
-    normalizedOrder,
   });
   const { signal, cleanup } = createAbortSignal(requestTimeoutMs);
   const requestUrl = new URL("/messages", apiBaseUrl);
