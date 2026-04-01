@@ -1,0 +1,19 @@
+{
+  "name": "qtickets-max-notifier",
+  "version": "0.1.0",
+  "description": "Webhook service: Qtickets order notifications to Max channel",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
+  }
+}
