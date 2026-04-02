@@ -31,6 +31,14 @@ export const configuration = {
   },
   qtickets: {
     webhookSecret: readOptionalEnv("QTICKETS_WEBHOOK_SECRET"),
+    orderDetailsUrlTemplate: readRequiredEnv("QTICKETS_ORDER_DETAILS_URL_TEMPLATE"),
+    apiToken: readRequiredEnv("QTICKETS_API_TOKEN"),
+    apiAuthHeaderName: readOptionalEnv("QTICKETS_API_AUTH_HEADER_NAME", "authorization"),
+    apiAuthScheme: readOptionalEnv("QTICKETS_API_AUTH_SCHEME", "Bearer"),
+    requestTimeoutMs: toPositiveInteger(
+      readOptionalEnv("QTICKETS_API_REQUEST_TIMEOUT_MS", "10000"),
+      10000
+    ),
   },
   max: {
     botToken: readRequiredEnv("MAX_BOT_TOKEN"),

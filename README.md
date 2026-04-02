@@ -49,6 +49,27 @@ https://<your-domain>/webhooks/qtickets
 - `x-webhook-secret: <QTICKETS_WEBHOOK_SECRET>`
 - `authorization: Bearer <QTICKETS_WEBHOOK_SECRET>`
 
+## Обогащение заказа через Qtickets API (обязательно)
+
+Сервис всегда делает запрос в API Qtickets для чтения деталей заказа. Это нужно, чтобы гарантированно получать email, состав билетов и итоговую сумму даже при урезанном webhook payload.
+
+- `QTICKETS_ORDER_DETAILS_URL_TEMPLATE` — шаблон URL для чтения заказа по ID. Используйте `{orderId}` как плейсхолдер.
+- `QTICKETS_API_TOKEN` — токен доступа к API Qtickets.
+- `QTICKETS_API_AUTH_HEADER_NAME` — имя заголовка авторизации (по умолчанию `authorization`).
+- `QTICKETS_API_AUTH_SCHEME` — схема авторизации перед токеном (по умолчанию `Bearer`).
+- `QTICKETS_API_REQUEST_TIMEOUT_MS` — таймаут запроса в миллисекундах.
+
+Пример:
+
+```text
+QTICKETS_ORDER_DETAILS_URL_TEMPLATE=https://qtickets.app/api/.../orders/{orderId}
+QTICKETS_API_TOKEN=your_qtickets_api_token
+QTICKETS_API_AUTH_HEADER_NAME=authorization
+QTICKETS_API_AUTH_SCHEME=Bearer
+```
+
+Сервис сначала принимает webhook, затем по `orderId` запрашивает детали заказа из API. Если API недоступен или не вернул данные, webhook завершается ошибкой и уведомление в Max не отправляется.
+
 ## Тестовый запрос
 
 ```bash

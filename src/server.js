@@ -5,6 +5,7 @@ import {
   normalizeQticketsOrderNotification,
 } from "./qtickets-parser.js";
 import { postOrderNotificationToMax } from "./max-client.js";
+import { fetchQticketsOrderDetails } from "./qtickets-client.js";
 
 function logWithLevel(level, message, details = null) {
   const timestamp = new Date().toISOString();
@@ -36,6 +37,48 @@ function isAuthorizedRequest(request, expectedSecret) {
   return false;
 }
 
+function hasUsableValue(value) {
+  if (value == null) {
+    return false;
+  }
+  if (typeof value === "string") {
+    return value.trim() !== "";
+  }
+  return true;
+}
+
+function mergePayloadWithFallback(primaryPayload, fallbackPayload) {
+  if (Array.isArray(primaryPayload) || Array.isArray(fallbackPayload)) {
+    if (Array.isArray(primaryPayload) && primaryPayload.length > 0) {
+      return primaryPayload;
+    }
+    if (Array.isArray(fallbackPayload)) {
+      return fallbackPayload;
+    }
+    return primaryPayload;
+  }
+
+  if (
+    primaryPayload &&
+    typeof primaryPayload === "object" &&
+    fallbackPayload &&
+    typeof fallbackPayload === "object"
+  ) {
+    const mergedObject = { ...fallbackPayload };
+    for (const [key, primaryValue] of Object.entries(primaryPayload)) {
+      const fallbackValue = fallbackPayload[key];
+      if (primaryValue && typeof primaryValue === "object" && !Array.isArray(primaryValue)) {
+        mergedObject[key] = mergePayloadWithFallback(primaryValue, fallbackValue);
+        continue;
+      }
+      mergedObject[key] = hasUsableValue(primaryValue) ? primaryValue : fallbackValue;
+    }
+    return mergedObject;
+  }
+
+  return hasUsableValue(primaryPayload) ? primaryPayload : fallbackPayload;
+}
+
 function createApplication() {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
@@ -51,7 +94,28 @@ function createApplication() {
     }
 
     try {
-      const normalizedOrder = normalizeQticketsOrderNotification(request.body ?? {});
+      const webhookPayload = request.body ?? {};
+      const webhookOrder = normalizeQticketsOrderNotification(webhookPayload);
+      if (!webhookOrder.orderId || webhookOrder.orderId === "unknown") {
+        response.status(400).json({
+          ok: false,
+          error: "Webhook payload does not contain order id",
+        });
+        return;
+      }
+
+      const qticketsApiPayload = await fetchQticketsOrderDetails({
+        orderDetailsUrlTemplate: configuration.qtickets.orderDetailsUrlTemplate,
+        orderId: webhookOrder.orderId,
+        apiToken: configuration.qtickets.apiToken,
+        apiAuthHeaderName: configuration.qtickets.apiAuthHeaderName,
+        apiAuthScheme: configuration.qtickets.apiAuthScheme,
+        requestTimeoutMs: configuration.qtickets.requestTimeoutMs,
+      });
+
+      const mergedPayload = mergePayloadWithFallback(qticketsApiPayload, webhookPayload);
+      const normalizedOrder = normalizeQticketsOrderNotification(mergedPayload);
+
       const messageText = formatNotificationMessage(
         normalizedOrder,
         configuration.max.messagePrefix
@@ -78,9 +142,9 @@ function createApplication() {
       logWithLevel("ERROR", "Failed to process Qtickets webhook", {
         message: error?.message ?? String(error),
       });
-      response.status(500).json({
+      response.status(502).json({
         ok: false,
-        error: "Failed to process webhook",
+        error: "Failed to fetch order details from Qtickets API",
       });
     }
   });
