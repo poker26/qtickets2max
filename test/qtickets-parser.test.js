@@ -12,10 +12,11 @@ test("normalizeQticketsOrderNotification extracts core fields", () => {
       status: "paid",
       amount: 4500,
       currency: "RUB",
-      tickets: [{ quantity: 2 }, { quantity: 1 }],
+      tickets: [{ quantity: 2 }, { quantity: 1, name: "Детский билет", price: 500 }],
       customer_name: "Иван Петров",
       customer_phone: "+79991234567",
       customer_email: "ivan@example.com",
+      client_id: 9433743,
     },
     event: {
       title: "Экскурсия на миниферму",
@@ -30,25 +31,40 @@ test("normalizeQticketsOrderNotification extracts core fields", () => {
   assert.equal(normalizedOrder.ticketCount, 3);
   assert.equal(normalizedOrder.totalAmount, 4500);
   assert.equal(normalizedOrder.buyerName, "Иван Петров");
+  assert.equal(normalizedOrder.clientDetailsUrl, "https://qtickets.app/clients/update/9433743");
+  assert.equal(normalizedOrder.orderDetailsUrl, "https://qtickets.app/orders/update/789");
+  assert.equal(normalizedOrder.ticketLineItems.length, 3);
 });
 
-test("formatNotificationMessage produces human readable text", () => {
+test("formatNotificationMessage produces requested layout", () => {
   const normalizedOrder = {
-    orderId: "1234",
+    orderId: "18365923",
     orderStatus: "paid",
-    eventName: "Экскурсия выходного дня",
-    eventDateIso: "2026-04-05T09:00:00.000Z",
+    eventName: "В гости к альпакам",
+    eventDateIso: "2026-04-04T12:00:00+03:00",
     ticketCount: 2,
-    totalAmount: 3000,
+    ticketLineItems: [
+      { title: "Взрослый билет", unitPrice: 2000, currency: "RUB" },
+      { title: "Взрослый билет", unitPrice: 2000, currency: "RUB" },
+    ],
+    totalAmount: 4000,
     currency: "RUB",
-    buyerName: "Мария",
+    buyerName: null,
     buyerPhone: null,
-    buyerEmail: null,
+    buyerEmail: "snaii@mail.ru",
+    clientDetailsUrl: "https://qtickets.app/clients/update/9433743",
+    orderDetailsUrl: "https://qtickets.app/orders/update/18365923",
+    utmTags: [],
   };
 
   const message = formatNotificationMessage(normalizedOrder, "[MiniFarm]");
-  assert.match(message, /Новый заказ билетов/);
-  assert.match(message, /Заказ: #1234/);
-  assert.match(message, /Количество билетов: 2/);
-  assert.match(message, /Статус: paid/);
+  assert.match(message, /^Мероприятие/m);
+  assert.match(message, /В гости к альпакам/);
+  assert.match(message, /Email/);
+  assert.match(message, /snaii@mail\.ru \(https:\/\/qtickets\.app\/clients\/update\/9433743\)/);
+  assert.match(message, /1\) Взрослый билет \(2[\s\u00A0]000 руб\.\)/u);
+  assert.match(message, /2\) Взрослый билет \(2[\s\u00A0]000 руб\.\)/u);
+  assert.match(message, /Итого: 4[\s\u00A0]000 руб\./u);
+  assert.match(message, /UTM-метки\nотсутствуют/);
+  assert.match(message, /Подробнее\nhttps:\/\/qtickets\.app\/orders\/update\/18365923/);
 });
