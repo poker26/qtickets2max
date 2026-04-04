@@ -27,7 +27,12 @@ function toPositiveInteger(rawValue, fallbackValue = null) {
 }
 
 function collectTicketCount(payload) {
-  const tickets = pickFirstDefined(payload?.tickets, payload?.order?.tickets);
+  const tickets = pickFirstDefined(
+    payload?.tickets,
+    payload?.order?.tickets,
+    payload?.baskets,
+    payload?.order?.baskets
+  );
   if (Array.isArray(tickets) && tickets.length > 0) {
     let ticketCount = 0;
     for (const ticket of tickets) {
@@ -55,7 +60,12 @@ function collectTicketCount(payload) {
 }
 
 function collectTicketLineItems(payload, currency) {
-  const tickets = pickFirstDefined(payload?.tickets, payload?.order?.tickets);
+  const tickets = pickFirstDefined(
+    payload?.tickets,
+    payload?.order?.tickets,
+    payload?.baskets,
+    payload?.order?.baskets
+  );
   if (!Array.isArray(tickets) || tickets.length === 0) {
     return [];
   }
@@ -68,7 +78,8 @@ function collectTicketLineItems(payload, currency) {
         ticket?.name,
         ticket?.ticket_name,
         ticket?.ticket_type_name,
-        ticket?.tariff_name
+        ticket?.tariff_name,
+        ticket?.seat_name
       ) ?? "Билет";
 
     const ticketUnitPrice = toFiniteNumber(
@@ -203,30 +214,49 @@ export function normalizeQticketsOrderNotification(payload) {
     payload?.customer_name,
     payload?.buyer_name,
     payload?.order?.customer_name,
-    payload?.order?.buyer_name
+    payload?.order?.buyer_name,
+    payload?.client?.details?.name
   );
   const buyerPhone = pickFirstDefined(
     payload?.customer_phone,
     payload?.buyer_phone,
-    payload?.order?.customer_phone
+    payload?.order?.customer_phone,
+    payload?.client?.details?.phone,
+    payload?.baskets?.[0]?.client_phone
   );
   const buyerEmail = pickFirstDefined(
     payload?.customer_email,
     payload?.buyer_email,
-    payload?.order?.customer_email
+    payload?.order?.customer_email,
+    payload?.client?.email,
+    payload?.baskets?.[0]?.client_email
   );
   const totalAmount = toFiniteNumber(
     pickFirstDefined(
       payload?.total,
       payload?.amount,
+      payload?.price,
       payload?.order?.total,
-      payload?.order?.amount
+      payload?.order?.amount,
+      payload?.order?.price
     )
   );
-  const currency = pickFirstDefined(payload?.currency, payload?.order?.currency, "RUB");
+  const currency = pickFirstDefined(
+    payload?.currency,
+    payload?.currency_id,
+    payload?.order?.currency,
+    payload?.order?.currency_id,
+    "RUB"
+  );
   const ticketCount = collectTicketCount(payload);
   const ticketLineItems = collectTicketLineItems(payload, String(currency ?? "RUB"));
-  const orderStatus = pickFirstDefined(payload?.status, payload?.order?.status, "new");
+  const orderStatus = pickFirstDefined(
+    payload?.status,
+    payload?.order?.status,
+    payload?.payed === true ? "paid" : null,
+    payload?.payed === false ? "not_paid" : null,
+    "new"
+  );
   const orderDetailsUrl = extractOrderDetailsUrl(payload, orderId ? String(orderId) : "unknown");
   const clientDetailsUrl = extractClientDetailsUrl(payload);
   const utmTags = extractUtmTags(payload);

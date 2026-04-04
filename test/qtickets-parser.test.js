@@ -68,3 +68,40 @@ test("formatNotificationMessage produces requested layout", () => {
   assert.match(message, /UTM-метки\nотсутствуют/);
   assert.match(message, /Подробнее\nhttps:\/\/qtickets\.app\/orders\/update\/18365923/);
 });
+
+test("normalizeQticketsOrderNotification supports Qtickets REST order payload", () => {
+  const qticketsApiPayload = {
+    id: 18393844,
+    payed: true,
+    price: 6000,
+    currency_id: "RUB",
+    client_id: 9442900,
+    client: {
+      id: 9442900,
+      email: "asavostyan@gmail.com",
+      details: {
+        phone: "+79169651309",
+      },
+    },
+    baskets: [
+      { seat_name: "Детский билет", price: 1000, quantity: 1 },
+      { seat_name: "Детский билет", price: 1000, quantity: 1 },
+      { seat_name: "Взрослый билет", price: 2000, quantity: 1 },
+      { seat_name: "Взрослый билет", price: 2000, quantity: 1 },
+    ],
+  };
+
+  const normalizedOrder = normalizeQticketsOrderNotification(qticketsApiPayload);
+
+  assert.equal(normalizedOrder.orderId, "18393844");
+  assert.equal(normalizedOrder.orderStatus, "paid");
+  assert.equal(normalizedOrder.totalAmount, 6000);
+  assert.equal(normalizedOrder.currency, "RUB");
+  assert.equal(normalizedOrder.ticketCount, 4);
+  assert.equal(normalizedOrder.buyerEmail, "asavostyan@gmail.com");
+  assert.equal(normalizedOrder.buyerPhone, "+79169651309");
+  assert.equal(normalizedOrder.clientDetailsUrl, "https://qtickets.app/clients/update/9442900");
+  assert.equal(normalizedOrder.ticketLineItems.length, 4);
+  assert.equal(normalizedOrder.ticketLineItems[0].title, "Детский билет");
+  assert.equal(normalizedOrder.ticketLineItems[2].title, "Взрослый билет");
+});
