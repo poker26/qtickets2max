@@ -31,7 +31,11 @@ export const configuration = {
   },
   qtickets: {
     webhookSecret: readOptionalEnv("QTICKETS_WEBHOOK_SECRET"),
-    orderDetailsUrlTemplate: readRequiredEnv("QTICKETS_ORDER_DETAILS_URL_TEMPLATE"),
+    // Qtickets REST API: https://qtickets.help/article/rest-api/
+    orderDetailsUrlTemplate: readOptionalEnv(
+      "QTICKETS_ORDER_DETAILS_URL_TEMPLATE",
+      "https://qtickets.ru/api/rest/v1/orders/{orderId}"
+    ),
     apiToken: readRequiredEnv("QTICKETS_API_TOKEN"),
     apiAuthHeaderName: readOptionalEnv("QTICKETS_API_AUTH_HEADER_NAME", "authorization"),
     apiAuthScheme: readOptionalEnv("QTICKETS_API_AUTH_SCHEME", "Bearer"),

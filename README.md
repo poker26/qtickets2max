@@ -53,7 +53,7 @@ https://<your-domain>/webhooks/qtickets
 
 Сервис всегда делает запрос в API Qtickets для чтения деталей заказа. Это нужно, чтобы гарантированно получать email, состав билетов и итоговую сумму даже при урезанном webhook payload.
 
-- `QTICKETS_ORDER_DETAILS_URL_TEMPLATE` — шаблон URL для чтения заказа по ID. Используйте `{orderId}` как плейсхолдер.
+- `QTICKETS_ORDER_DETAILS_URL_TEMPLATE` — опционально. По умолчанию: `https://qtickets.ru/api/rest/v1/orders/{orderId}` (см. [REST API Qtickets](https://qtickets.help/article/rest-api/)). Переопределяйте только если нужен другой endpoint.
 - `QTICKETS_API_TOKEN` — токен доступа к API Qtickets.
 - `QTICKETS_API_AUTH_HEADER_NAME` — имя заголовка авторизации (по умолчанию `authorization`).
 - `QTICKETS_API_AUTH_SCHEME` — схема авторизации перед токеном (по умолчанию `Bearer`).
