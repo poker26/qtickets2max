@@ -104,6 +104,15 @@ function createApplication() {
         return;
       }
 
+      if (!String(configuration.qtickets.apiToken ?? "").trim()) {
+        response.status(503).json({
+          ok: false,
+          error:
+            "QTICKETS_API_TOKEN is not set. Add it to .env (Qtickets: Настройки → Основное, токен API).",
+        });
+        return;
+      }
+
       const qticketsApiPayload = await fetchQticketsOrderDetails({
         orderDetailsUrlTemplate: configuration.qtickets.orderDetailsUrlTemplate,
         orderId: webhookOrder.orderId,
