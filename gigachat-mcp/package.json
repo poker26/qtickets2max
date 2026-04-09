@@ -1,0 +1,21 @@
+{
+  "name": "gigachat-mcp-qtickets",
+  "version": "0.1.0",
+  "description": "MCP server: Qtickets catalog, seats, orders for GigaChat-style integrations",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:http": "node src/http-server.js",
+    "test": "node --test test/mcp-smoke.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "zod": "^3.23.8"
+  }
+}

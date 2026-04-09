@@ -96,4 +96,8 @@ npm test
 
 ---
 
+## GigaChat (MCP + Qtickets)
+
+Отдельный пакет [`gigachat-mcp/`](gigachat-mcp/) — MCP-сервер для каталога и заказов в Qtickets (см. [gigachat-mcp/README.md](gigachat-mcp/README.md)). Чеклисты по пилоту Сбера и вопросы в поддержку Qtickets: [docs/sber-gigachat-partner-checklist.md](docs/sber-gigachat-partner-checklist.md), [docs/qtickets-api-support-questions.md](docs/qtickets-api-support-questions.md).
+
 Справка Qtickets API: [qtickets.help / API](https://qtickets.help/article-categories/api/)
