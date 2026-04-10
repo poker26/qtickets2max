@@ -6,6 +6,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 import { gigachatMcpConfiguration } from "./config.js";
+import { registerSberCommerceTools } from "./sber/register-sber-tools.js";
+import { createCommerceStateStore } from "./sber/state-store.js";
 import {
   qticketsCreateOrder,
   qticketsGetEvent,
@@ -54,24 +56,16 @@ function buildCheckoutHintPayload(eventPayload, checkoutMode) {
   };
 }
 
-export function createQticketsMcpServer() {
-  const server = new McpServer(
-    {
-      name: "qtickets-gigachat",
-      version: "0.1.0",
-    },
-    {
-      instructions:
-        "Инструменты для каталога мероприятий Qtickets, наличия мест и заказов. Токен API только на сервере.",
-    }
-  );
-
+/**
+ * Диагностические инструменты Qtickets (не входят в контракт Сбера). Включить: MCP_REGISTER_QTICKETS_TOOLS=true.
+ */
+function registerQticketsDiagnosticTools(server) {
   server.registerTool(
     "qtickets_list_events",
     {
-      title: "Список мероприятий Qtickets",
+      title: "Список мероприятий Qtickets (диагностика)",
       description:
-        "Возвращает страницу списка активных мероприятий (REST: GET /events с фильтром deleted_at IS NULL).",
+        "REST GET /events. Не является частью спецификации Sber mcp-integration; для отладки каталога.",
       inputSchema: z.object({
         page: z.number().int().min(1).optional().describe("Номер страницы (по умолчанию 1)"),
         orderDirection: z
@@ -89,8 +83,8 @@ export function createQticketsMcpServer() {
   server.registerTool(
     "qtickets_get_event",
     {
-      title: "Карточка мероприятия",
-      description: "Детали мероприятия, сеансы (shows), цены — REST GET /events/{id}.",
+      title: "Карточка мероприятия Qtickets (диагностика)",
+      description: "REST GET /events/{id}.",
       inputSchema: z.object({
         eventId: z.number().int().positive().describe("Идентификатор мероприятия в Qtickets"),
       }),
@@ -104,9 +98,8 @@ export function createQticketsMcpServer() {
   server.registerTool(
     "qtickets_get_show_seats",
     {
-      title: "Места и доступность сеанса",
-      description:
-        "REST GET /shows/{show_id}/seats. По умолчанию flat=true и только доступные места. Для сложных фильтров передайте seatQueryOverride.",
+      title: "Места и доступность сеанса Qtickets (диагностика)",
+      description: "REST GET /shows/{show_id}/seats.",
       inputSchema: z.object({
         showId: z.number().int().positive(),
         flat: z.boolean().optional().describe("Плоский ответ (рекомендуется true)"),
@@ -132,9 +125,7 @@ export function createQticketsMcpServer() {
           "ordered_quantity",
           "in_basket_quantity",
         ],
-        where: onlyAvailable
-          ? [{ column: "available", value: true }]
-          : [],
+        where: onlyAvailable ? [{ column: "available", value: true }] : [],
       };
 
       const body =
@@ -150,9 +141,8 @@ export function createQticketsMcpServer() {
   server.registerTool(
     "qtickets_get_order",
     {
-      title: "Детали заказа",
-      description:
-        "REST GET /orders/{id}. Содержит payed, baskets, payment_url и др. Используйте после оплаты или для статуса.",
+      title: "Детали заказа Qtickets (диагностика)",
+      description: "REST GET /orders/{id}.",
       inputSchema: z.object({
         orderId: z.number().int().positive(),
       }),
@@ -166,9 +156,8 @@ export function createQticketsMcpServer() {
   server.registerTool(
     "qtickets_checkout_hint",
     {
-      title: "Подсказка по оплате (виджет vs payment_url)",
-      description:
-        "Сводка по мероприятию и режиму QTICKETS_CHECKOUT_MODE из окружения: ссылка на виджет или ожидание payment_url после создания заказа.",
+      title: "Подсказка по оплате Qtickets (диагностика)",
+      description: "Сводка по мероприятию и QTICKETS_CHECKOUT_MODE.",
       inputSchema: z.object({
         eventId: z.number().int().positive(),
       }),
@@ -189,13 +178,12 @@ export function createQticketsMcpServer() {
     server.registerTool(
       "qtickets_create_order",
       {
-        title: "Создать заказ (POST /orders)",
-        description:
-          "Включено только если QTICKETS_ENABLE_CREATE_ORDER=true. Тело должно соответствовать контракту Qtickets; подтвердите поля у поддержки.",
+        title: "Создать заказ Qtickets POST /orders (диагностика)",
+        description: "Только при QTICKETS_ENABLE_CREATE_ORDER=true.",
         inputSchema: z.object({
           orderPayload: z
             .record(z.string(), z.any())
-            .describe('Обычно { "data": { ... } } — см. REST API и ответ поддержки Qtickets'),
+            .describe('Обычно { "data": { ... } }'),
         }),
       },
       async ({ orderPayload }) => {
@@ -204,20 +192,57 @@ export function createQticketsMcpServer() {
       }
     );
   }
+}
+
+/**
+ * MCP-сервер для приёмки GigaChat по спецификации mcp-integration (Sber Commerce).
+ * Плюс опциональные диагностические tools Qtickets.
+ */
+export function createGigaChatCommerceMcpServer() {
+  const server = new McpServer(
+    {
+      name: "sber-gigachat-commerce",
+      version: "0.2.0",
+    },
+    {
+      instructions:
+        "Соответствие GigaChat SberPay mcp-integration: get_merchant_info, get_skus, calculate_delivery, create_cart_mandate, share_fully_signed_mandate, share_fully_signed_cart_mandate, create_order, get_order_status. Ответы — JSON-RPC 2.0 в текстовом теле tool result. rqUid — UUID v4.",
+    }
+  );
+
+  const commerceStateStore = createCommerceStateStore();
+  registerSberCommerceTools(server, commerceStateStore);
+
+  if (gigachatMcpConfiguration.sber.registerQticketsDiagnosticTools) {
+    registerQticketsDiagnosticTools(server);
+  }
 
   return server;
 }
 
-async function main() {
-  if (!String(gigachatMcpConfiguration.qtickets.apiToken ?? "").trim()) {
+/** @deprecated используйте createGigaChatCommerceMcpServer */
+export function createQticketsMcpServer() {
+  return createGigaChatCommerceMcpServer();
+}
+
+function assertSberMandateSecretConfigured() {
+  const secret = String(gigachatMcpConfiguration.sber.mandateSigningSecret ?? "").trim();
+  if (secret.length < 16) {
     console.error(
-      "gigachat-mcp: set QTICKETS_API_TOKEN in the environment (Qtickets: Настройки → Основное)."
+      "gigachat-mcp: задайте SBER_MANDATE_SIGNING_SECRET (минимум 16 символов) для подписи CartMandate (HS256 JWT)."
     );
     process.exitCode = 1;
+    return false;
+  }
+  return true;
+}
+
+async function main() {
+  if (!assertSberMandateSecretConfigured()) {
     return;
   }
 
-  const mcpServer = createQticketsMcpServer();
+  const mcpServer = createGigaChatCommerceMcpServer();
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
 }

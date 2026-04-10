@@ -11,18 +11,20 @@ import { gigachatMcpConfiguration } from "./config.js";
 const application = express();
 
 application.get("/health", (_request, response) => {
+  const mandateSecret = String(gigachatMcpConfiguration.sber.mandateSigningSecret ?? "").trim();
   response.status(200).json({
     ok: true,
-    service: "gigachat-mcp-qtickets",
-    hasApiToken: Boolean(String(gigachatMcpConfiguration.qtickets.apiToken ?? "").trim()),
-    checkoutMode: gigachatMcpConfiguration.qtickets.checkoutMode,
+    service: "gigachat-mcp-sber-commerce",
+    sberMandateSecretConfigured: mandateSecret.length >= 16,
+    hasQticketsApiToken: Boolean(String(gigachatMcpConfiguration.qtickets.apiToken ?? "").trim()),
+    qticketsCheckoutMode: gigachatMcpConfiguration.qtickets.checkoutMode,
   });
 });
 
 application.get("/", (_request, response) => {
   response.type("text/plain; charset=utf-8").send(
     [
-      "gigachat-mcp-qtickets: MCP-сервер для Qtickets.",
+      "gigachat-mcp: MCP Sber Commerce (mcp-integration) + опционально Qtickets.",
       "Основной режим: stdio (запуск через node src/index.js или npm start).",
       "Этот порт — только health и справка; за nginx используйте /health для мониторинга.",
       "Документация: gigachat-mcp/README.md",

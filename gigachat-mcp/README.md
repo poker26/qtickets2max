@@ -1,62 +1,52 @@
-# MCP-сервер Qtickets для сценариев вроде GigaChat
+# MCP-сервер GigaChat × Sber Commerce (mcp-integration)
 
-Реализует [Model Context Protocol](https://modelcontextprotocol.io/) поверх **stdio** и вызывает [REST API Qtickets](https://qtickets.help/article/rest-api/) для каталога, наличия мест и заказов.
+Реализация сценария **[Интеграция с MCP серверами партнёра](https://developers.sber.ru/docs/ru/gigachat/guides/mcp/sberpay/mcp-integration)** поверх [Model Context Protocol](https://modelcontextprotocol.io/) (stdio).
 
-Связка с экосистемой Сбера (пилот, SberPay, Сбер ID) описана в [docs/sber-gigachat-partner-checklist.md](../docs/sber-gigachat-partner-checklist.md).
+Каждый инструмент возвращает **JSON-RPC 2.0** в текстовом поле результата: `{ "jsonrpc": 2, "result": { "rqUid", "rsTm", ... } }` или `{ "error": { "code", "message" } }` с кодами **-32001…-32099** из спецификации.
 
-## Инструменты (tools)
+## Инструменты (контракт Сбера)
 
-| Имя | Назначение |
-|-----|------------|
-| `qtickets_list_events` | Список мероприятий (страница) |
-| `qtickets_get_event` | Мероприятие по id, сеансы, цены |
-| `qtickets_get_show_seats` | Места / доступность для `show_id` |
-| `qtickets_get_order` | Заказ по id (`payment_url`, `baskets`, …) |
-| `qtickets_checkout_hint` | Подсказка: режим оплаты из env и кратко по сеансам |
-| `qtickets_create_order` | Только если `QTICKETS_ENABLE_CREATE_ORDER=true` — `POST /orders` |
+| Имя MCP tool | Описание |
+|--------------|----------|
+| `get_merchant_info` | Карточка мерчанта, доставка, оплата, `sberIntegrations` |
+| `get_skus` | `productSkus`; `productId` = `show:<id>` или числовой `show_id` Qtickets |
+| `calculate_delivery` | Для цифровых билетов / `SBER_DIGITAL_DELIVERY_ONLY=true` — нулевая доставка |
+| `create_cart_mandate` | Подпись мерчанта JWT HS256 (`SBER_MANDATE_SIGNING_SECRET`) |
+| `share_fully_signed_mandate` | Сохранение мандата с `userAuthorization` |
+| `share_fully_signed_cart_mandate` | То же (имя из диаграммы в доке Сбера) |
+| `create_order` | Заказ в памяти + `paymentInfo.paymentUrl` |
+| `get_order_status` | Статус по `orderId` |
 
-## Установка
+Общие поля запроса (Zod): **`rqUid`** (строго **UUID v4**), **`rqTm`**, **`clientInfo`** (`clientInfoToken`, `sberId`, `accessToken`), опционально **`jsonRpcId`**.
+
+## Обязательные переменные
+
+- **`SBER_MANDATE_SIGNING_SECRET`** — минимум 16 символов (без него процесс не стартует).
+- **`SBER_MERCHANT_NAME`** и остальной профиль — задайте реальные значения перед подачей на проверку.
+
+## Диагностика Qtickets (не часть контракта Сбера)
+
+При **`MCP_REGISTER_QTICKETS_TOOLS=true`** дополнительно регистрируются `qtickets_*` (каталог, места, заказы). Нужен **`QTICKETS_API_TOKEN`** для реальных вызовов API.
+
+## Установка и запуск
 
 ```bash
 cd gigachat-mcp
 npm install
 ```
 
-Скопируйте `.env.example` в `.env` и задайте **`QTICKETS_API_TOKEN`**.
-
-## Запуск (stdio)
+Скопируйте [`.env.example`](./.env.example) в `.env`, заполните секреты и профиль мерчанта.
 
 ```bash
 npm start
 ```
 
-Клиент MCP (в т.ч. GigaChat после согласования) подключается как подпроцесс: stdin/stdout.
+Health (отдельный процесс): `npm run start:http` → `GET /health`.
 
-## Health-check по HTTP (отдельный процесс)
+## Ограничения и дальнейшая доработка
 
-Для мониторинга за **nginx** на прод-сервере можно запустить второй процесс:
+- Подпись мандата сейчас **HS256** с симметричным секретом. Если Сбер потребует **RS256** и выданный ключ — замените реализацию в [`src/sber/mandate-signing.js`](src/sber/mandate-signing.js).
+- Заказы и мандаты хранятся **в памяти** процесса; для продакшена понадится БД.
+- **`create_order`** не вызывает автоматически Qtickets `POST /orders` (контракт уточняйте у Qtickets); при необходимости добавьте слияние отдельно.
 
-```bash
-npm run start:http
-```
-
-По умолчанию слушает порт **`8790`**: `GET /health`, `GET /`.
-
-**Важно:** это не замена транспорта MCP; удалённый транспорт для GigaChat задаётся в пилоте Сбера (при необходимости добавьте адаптер позже).
-
-## Развёртывание за HTTPS
-
-1. На хосте с Node.js поднимите **stdio**-MCP через процесс-менеджер (например **systemd** `ExecStart=/usr/bin/node .../gigachat-mcp/src/index.js` с переменными из окружения) **или** тот способ, который задаст куратор пилота GigaChat.
-2. **nginx** обычно проксирует **приложение с HTTP API**; для чистого stdio-MCP прокси не нужен, нужен лишь запуск процесса на стороне интегратора чата.
-3. Храните **токен API** только в переменных окружения на сервере.
-
-## Переменные окружения
-
-См. [`.env.example`](./.env.example). Ключевые:
-
-- **`QTICKETS_CHECKOUT_MODE`** — `redirect_widget` | `payment_url_after_create` (см. [docs/gigachat-payment-flow.md](../docs/gigachat-payment-flow.md)).
-- **`QTICKETS_ENABLE_CREATE_ORDER`** — `true` только после ответа поддержки Qtickets по `POST /orders`.
-
-## Вопросы в поддержку Qtickets
-
-Шаблон: [docs/qtickets-api-support-questions.md](../docs/qtickets-api-support-questions.md).
+Чеклист партнёра: [docs/sber-gigachat-partner-checklist.md](../docs/sber-gigachat-partner-checklist.md).

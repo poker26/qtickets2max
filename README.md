@@ -96,8 +96,8 @@ npm test
 
 ---
 
-## GigaChat (MCP + Qtickets)
+## GigaChat (Sber Commerce MCP + Qtickets)
 
-Отдельный пакет [`gigachat-mcp/`](gigachat-mcp/) — MCP-сервер для каталога и заказов в Qtickets (см. [gigachat-mcp/README.md](gigachat-mcp/README.md)). Чеклисты по пилоту Сбера и вопросы в поддержку Qtickets: [docs/sber-gigachat-partner-checklist.md](docs/sber-gigachat-partner-checklist.md), [docs/qtickets-api-support-questions.md](docs/qtickets-api-support-questions.md).
+Пакет [`gigachat-mcp/`](gigachat-mcp/) реализует контракт **[mcp-integration](https://developers.sber.ru/docs/ru/gigachat/guides/mcp/sberpay/mcp-integration)** (`get_merchant_info`, `get_skus`, мандаты, `create_order`, …). Диагностические вызовы Qtickets включаются переменной `MCP_REGISTER_QTICKETS_TOOLS`. Подробнее: [gigachat-mcp/README.md](gigachat-mcp/README.md). Чеклист Сбера и вопросы в Qtickets: [docs/sber-gigachat-partner-checklist.md](docs/sber-gigachat-partner-checklist.md), [docs/qtickets-api-support-questions.md](docs/qtickets-api-support-questions.md).
 
 Справка Qtickets API: [qtickets.help / API](https://qtickets.help/article-categories/api/)

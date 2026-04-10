@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { createQticketsMcpServer } from "../src/index.js";
+process.env.SBER_MANDATE_SIGNING_SECRET = "unit_test_secret_minimum_16";
 
-test("createQticketsMcpServer builds McpServer with underlying Server", () => {
-  const mcp = createQticketsMcpServer();
+const { createGigaChatCommerceMcpServer } = await import("../src/index.js");
+
+test("createGigaChatCommerceMcpServer builds McpServer with underlying Server", () => {
+  const mcp = createGigaChatCommerceMcpServer();
   assert.equal(typeof mcp.connect, "function");
   assert.ok(mcp.server);
 });
