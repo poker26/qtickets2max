@@ -1,0 +1,19 @@
+{
+  "name": "qtickets-agent-mcp",
+  "version": "0.1.0",
+  "description": "Standalone MCP server: browse Qtickets events, shows, prices, availability, purchase links",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/smoke.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
+  }
+}

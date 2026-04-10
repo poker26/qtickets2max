@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test test/qtickets-parser.test.js gigachat-mcp/test/mcp-smoke.test.js"
+    "test": "node --test test/qtickets-parser.test.js gigachat-mcp/test/mcp-smoke.test.js qtickets-agent-mcp/test/smoke.test.js"
   },
   "engines": {
     "node": ">=18"

@@ -100,4 +100,8 @@ npm test
 
 Пакет [`gigachat-mcp/`](gigachat-mcp/) реализует контракт **[mcp-integration](https://developers.sber.ru/docs/ru/gigachat/guides/mcp/sberpay/mcp-integration)** (`get_merchant_info`, `get_skus`, мандаты, `create_order`, …). Диагностические вызовы Qtickets включаются переменной `MCP_REGISTER_QTICKETS_TOOLS`. Подробнее: [gigachat-mcp/README.md](gigachat-mcp/README.md). Чеклист Сбера и вопросы в Qtickets: [docs/sber-gigachat-partner-checklist.md](docs/sber-gigachat-partner-checklist.md), [docs/qtickets-api-support-questions.md](docs/qtickets-api-support-questions.md).
 
+## MCP для агентов (Qtickets без Сбера)
+
+Отдельный процесс [`qtickets-agent-mcp/`](qtickets-agent-mcp/) — выбор мероприятий, сеансов, остатков и ссылка на виджет; удобно для Manus и других MCP-клиентов. См. [qtickets-agent-mcp/README.md](qtickets-agent-mcp/README.md).
+
 Справка Qtickets API: [qtickets.help / API](https://qtickets.help/article-categories/api/)
