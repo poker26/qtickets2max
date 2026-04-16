@@ -50,7 +50,7 @@ test("formatNotificationMessage produces requested layout", () => {
     totalAmount: 4000,
     currency: "RUB",
     buyerName: null,
-    buyerPhone: null,
+    buyerPhone: "+79991230000",
     buyerEmail: "snaii@mail.ru",
     clientDetailsUrl: "https://qtickets.app/clients/update/9433743",
     orderDetailsUrl: "https://qtickets.app/orders/update/18365923",
@@ -62,6 +62,7 @@ test("formatNotificationMessage produces requested layout", () => {
   assert.match(message, /В гости к альпакам/);
   assert.match(message, /Email/);
   assert.match(message, /snaii@mail\.ru \(https:\/\/qtickets\.app\/clients\/update\/9433743\)/);
+  assert.match(message, /Телефон\n\+79991230000/);
   assert.match(message, /1\) Взрослый билет \(2[\s\u00A0]000 руб\.\)/u);
   assert.match(message, /2\) Взрослый билет \(2[\s\u00A0]000 руб\.\)/u);
   assert.match(message, /Итого: 4[\s\u00A0]000 руб\./u);
@@ -104,4 +105,32 @@ test("normalizeQticketsOrderNotification supports Qtickets REST order payload", 
   assert.equal(normalizedOrder.ticketLineItems.length, 4);
   assert.equal(normalizedOrder.ticketLineItems[0].title, "Детский билет");
   assert.equal(normalizedOrder.ticketLineItems[2].title, "Взрослый билет");
+});
+
+test("normalizeQticketsOrderNotification picks phone from any basket row", () => {
+  const payload = {
+    id: 1,
+    client: { email: "a@b.ru", details: {} },
+    baskets: [
+      { client_phone: "", seat_name: "A", price: 1, quantity: 1 },
+      { client_phone: "+79001234567", seat_name: "B", price: 1, quantity: 1 },
+    ],
+  };
+  assert.equal(normalizeQticketsOrderNotification(payload).buyerPhone, "+79001234567");
+});
+
+test("normalize resolves event session date from Qtickets event shows by basket show_id", () => {
+  const payload = {
+    id: 1,
+    event_id: 149867,
+    baskets: [{ show_id: 843873, seat_name: "Взрослый билет", price: 2000, quantity: 1 }],
+    event: {
+      name: "В гости к альпакам",
+      shows: [{ id: 843873, start_date: "2026-04-04T12:00:00+03:00" }],
+    },
+  };
+  const normalizedOrder = normalizeQticketsOrderNotification(payload);
+  assert.equal(normalizedOrder.eventName, "В гости к альпакам");
+  assert.ok(normalizedOrder.eventDateIso);
+  assert.match(String(normalizedOrder.eventDateIso), /2026-04-04/);
 });

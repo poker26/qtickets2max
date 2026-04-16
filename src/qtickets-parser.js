@@ -114,6 +114,77 @@ function toIsoDate(rawValue) {
   return parsedDate.toISOString();
 }
 
+function pickFirstClientPhoneFromBaskets(baskets) {
+  if (!Array.isArray(baskets)) {
+    return null;
+  }
+  for (const basket of baskets) {
+    const phone = basket?.client_phone;
+    if (phone != null && String(phone).trim() !== "") {
+      return phone;
+    }
+  }
+  return null;
+}
+
+function extractEventSessionDateIso(payload) {
+  const directSessionDate = pickFirstDefined(
+    payload?.event_date,
+    payload?.event?.date_start,
+    payload?.event?.start_at,
+    payload?.order?.event_date
+  );
+  if (directSessionDate) {
+    return toIsoDate(directSessionDate);
+  }
+
+  const event = payload?.event;
+  const shows = event?.shows;
+  if (!Array.isArray(shows) || shows.length === 0) {
+    return null;
+  }
+
+  const basketShowId = pickFirstDefined(
+    payload?.baskets?.[0]?.show_id,
+    payload?.order?.baskets?.[0]?.show_id
+  );
+
+  if (basketShowId != null && String(basketShowId).trim() !== "") {
+    const matchedShow = shows.find((show) => String(show?.id) === String(basketShowId));
+    if (matchedShow) {
+      const sessionStart = pickFirstDefined(
+        matchedShow.start_date,
+        matchedShow.open_date,
+        matchedShow.start_at,
+        matchedShow.finish_date
+      );
+      if (sessionStart) {
+        return toIsoDate(sessionStart);
+      }
+    }
+  }
+
+  if (shows.length === 1) {
+    const onlyShow = shows[0];
+    const sessionStart = pickFirstDefined(
+      onlyShow?.start_date,
+      onlyShow?.open_date,
+      onlyShow?.start_at
+    );
+    if (sessionStart) {
+      return toIsoDate(sessionStart);
+    }
+  }
+
+  const firstShow = shows[0];
+  const sessionStart = pickFirstDefined(
+    firstShow?.start_date,
+    firstShow?.open_date,
+    firstShow?.start_at
+  );
+  return sessionStart ? toIsoDate(sessionStart) : null;
+}
+
 function extractOrderDetailsUrl(payload, orderId) {
   const explicitOrderUrl = pickFirstDefined(
     payload?.order_url,
@@ -202,14 +273,7 @@ export function normalizeQticketsOrderNotification(payload) {
     payload?.event?.title,
     payload?.order?.event_name
   );
-  const eventDateIso = toIsoDate(
-    pickFirstDefined(
-      payload?.event_date,
-      payload?.event?.date_start,
-      payload?.event?.start_at,
-      payload?.order?.event_date
-    )
-  );
+  const eventDateIso = extractEventSessionDateIso(payload);
   const buyerName = pickFirstDefined(
     payload?.customer_name,
     payload?.buyer_name,
@@ -222,7 +286,8 @@ export function normalizeQticketsOrderNotification(payload) {
     payload?.buyer_phone,
     payload?.order?.customer_phone,
     payload?.client?.details?.phone,
-    payload?.baskets?.[0]?.client_phone
+    pickFirstClientPhoneFromBaskets(payload?.baskets),
+    pickFirstClientPhoneFromBaskets(payload?.order?.baskets)
   );
   const buyerEmail = pickFirstDefined(
     payload?.customer_email,
@@ -378,6 +443,10 @@ export function formatNotificationMessage(normalizedOrder, messagePrefix) {
   lines.push("");
   lines.push("Email");
   lines.push(formatBuyerEmailLine(normalizedOrder));
+
+  lines.push("");
+  lines.push("Телефон");
+  lines.push(normalizedOrder.buyerPhone ? String(normalizedOrder.buyerPhone) : "не указан");
 
   lines.push("");
   lines.push("Состав заказа");

@@ -70,6 +70,8 @@ QTICKETS_API_AUTH_SCHEME=Bearer
 
 Сервис сначала принимает webhook, затем по `orderId` запрашивает детали заказа из API. Если API недоступен или не вернул данные, webhook завершается ошибкой и уведомление в Max не отправляется.
 
+Дополнительно, если в заказе есть `event_id`, выполняется запрос `GET /api/rest/v1/events/{eventId}` (по умолчанию `https://qtickets.ru/api/rest/v1/events/{eventId}`), чтобы взять дату сеанса из `shows` по `show_id` первого билета. Переопределение URL: `QTICKETS_EVENT_DETAILS_URL_TEMPLATE`.
+
 ## Тестовый запрос
 
 ```bash

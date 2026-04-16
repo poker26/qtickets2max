@@ -35,21 +35,16 @@ function normalizeQticketsApiPayload(responseBody) {
   return {};
 }
 
-export async function fetchQticketsOrderDetails({
-  orderDetailsUrlTemplate,
-  orderId,
+async function fetchQticketsGetJson({
+  requestUrl,
   apiToken,
   apiAuthHeaderName,
   apiAuthScheme,
   requestTimeoutMs,
+  errorLabel,
 }) {
-  const requestUrl = String(orderDetailsUrlTemplate ?? "").replaceAll(
-    "{orderId}",
-    encodeURIComponent(String(orderId))
-  );
-
   if (!requestUrl || !requestUrl.startsWith("http")) {
-    throw new Error("QTICKETS_ORDER_DETAILS_URL_TEMPLATE is not configured correctly");
+    throw new Error(`${errorLabel}: URL is not configured correctly`);
   }
 
   const requestHeaders = {
@@ -69,7 +64,7 @@ export async function fetchQticketsOrderDetails({
     if (!response.ok) {
       const responseText = await response.text();
       throw new Error(
-        `Qtickets API order details failed (${response.status}): ${responseText || "<empty body>"}`
+        `${errorLabel} (${response.status}): ${responseText || "<empty body>"}`
       );
     }
 
@@ -78,4 +73,50 @@ export async function fetchQticketsOrderDetails({
   } finally {
     cleanup();
   }
+}
+
+export async function fetchQticketsOrderDetails({
+  orderDetailsUrlTemplate,
+  orderId,
+  apiToken,
+  apiAuthHeaderName,
+  apiAuthScheme,
+  requestTimeoutMs,
+}) {
+  const requestUrl = String(orderDetailsUrlTemplate ?? "").replaceAll(
+    "{orderId}",
+    encodeURIComponent(String(orderId))
+  );
+
+  return fetchQticketsGetJson({
+    requestUrl,
+    apiToken,
+    apiAuthHeaderName,
+    apiAuthScheme,
+    requestTimeoutMs,
+    errorLabel: "Qtickets API order details failed",
+  });
+}
+
+export async function fetchQticketsEventDetails({
+  eventDetailsUrlTemplate,
+  eventId,
+  apiToken,
+  apiAuthHeaderName,
+  apiAuthScheme,
+  requestTimeoutMs,
+}) {
+  const requestUrl = String(eventDetailsUrlTemplate ?? "").replaceAll(
+    "{eventId}",
+    encodeURIComponent(String(eventId))
+  );
+
+  return fetchQticketsGetJson({
+    requestUrl,
+    apiToken,
+    apiAuthHeaderName,
+    apiAuthScheme,
+    requestTimeoutMs,
+    errorLabel: "Qtickets API event details failed",
+  });
 }

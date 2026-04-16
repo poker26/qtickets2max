@@ -5,7 +5,7 @@ import {
   normalizeQticketsOrderNotification,
 } from "./qtickets-parser.js";
 import { postOrderNotificationToMax } from "./max-client.js";
-import { fetchQticketsOrderDetails } from "./qtickets-client.js";
+import { fetchQticketsEventDetails, fetchQticketsOrderDetails } from "./qtickets-client.js";
 
 function logWithLevel(level, message, details = null) {
   const timestamp = new Date().toISOString();
@@ -122,7 +122,30 @@ function createApplication() {
         requestTimeoutMs: configuration.qtickets.requestTimeoutMs,
       });
 
-      const mergedPayload = mergePayloadWithFallback(qticketsApiPayload, webhookPayload);
+      let mergedPayload = mergePayloadWithFallback(qticketsApiPayload, webhookPayload);
+      const eventIdRaw = mergedPayload?.event_id ?? mergedPayload?.order?.event_id;
+      const eventIdForFetch =
+        eventIdRaw != null && String(eventIdRaw).trim() !== "" ? String(eventIdRaw).trim() : null;
+
+      if (eventIdForFetch) {
+        try {
+          const eventApiPayload = await fetchQticketsEventDetails({
+            eventDetailsUrlTemplate: configuration.qtickets.eventDetailsUrlTemplate,
+            eventId: eventIdForFetch,
+            apiToken: configuration.qtickets.apiToken,
+            apiAuthHeaderName: configuration.qtickets.apiAuthHeaderName,
+            apiAuthScheme: configuration.qtickets.apiAuthScheme,
+            requestTimeoutMs: configuration.qtickets.requestTimeoutMs,
+          });
+          mergedPayload = mergePayloadWithFallback({ event: eventApiPayload }, mergedPayload);
+        } catch (eventFetchError) {
+          logWithLevel("WARN", "Qtickets event details fetch failed; message may lack session date", {
+            eventId: eventIdForFetch,
+            message: eventFetchError?.message ?? String(eventFetchError),
+          });
+        }
+      }
+
       const normalizedOrder = normalizeQticketsOrderNotification(mergedPayload);
 
       const messageText = formatNotificationMessage(

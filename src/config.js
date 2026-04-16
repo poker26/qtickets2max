@@ -36,6 +36,10 @@ export const configuration = {
       "QTICKETS_ORDER_DETAILS_URL_TEMPLATE",
       "https://qtickets.ru/api/rest/v1/orders/{orderId}"
     ),
+    eventDetailsUrlTemplate: readOptionalEnv(
+      "QTICKETS_EVENT_DETAILS_URL_TEMPLATE",
+      "https://qtickets.ru/api/rest/v1/events/{eventId}"
+    ),
     // Пустой токен допускается: процесс стартует, но вебхук без токена не сможет дернуть Qtickets API.
     apiToken: readOptionalEnv("QTICKETS_API_TOKEN"),
     apiAuthHeaderName: readOptionalEnv("QTICKETS_API_AUTH_HEADER_NAME", "authorization"),
